@@ -32,7 +32,7 @@ program
   .option("-s, --size [size]", "Number of lines to read before writing.", 5000)
   .parse(process.argv);
 
-  const options = program.opts();
+const options = program.opts();
 
 if (!options.table) {
   console.log("You must specify a table");
@@ -62,7 +62,8 @@ if (options.envcreds) {
   AWS.config.update({
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      sessionToken: process.env.AWS_SESSION_TOKEN
     },
     region: process.env.AWS_DEFAULT_REGION
   });
@@ -83,6 +84,8 @@ if (options.mfa && options.profile) {
 
 const dynamoDB = new AWS.DynamoDB();
 
+options.keyExpressionValues = null;``
+
 const query = {
   TableName: options.table,
   IndexName: options.index,
@@ -96,6 +99,11 @@ const query = {
 const scanQuery = {
   TableName: options.table,
   IndexName: options.index,
+  FilterExpression: "contains(metadata, :metadata)",
+  //Select: "COUNT",
+  ExpressionAttributeValues: {
+    ":metadata": {"S":"appId"}
+  },
   ProjectionExpression: options.select,
   Limit: 1000
 };
@@ -121,7 +129,7 @@ const describeTable = () => {
   );
 };
 
- const scanDynamoDB = (query) => {
+const scanDynamoDB = (query) => {
   dynamoDB.scan(query, function (err, data) {
     if (!err) {
       unMarshalIntoArray(data.Items); // Print out the subset of results.
